@@ -1,0 +1,70 @@
+# ── SmartRAG Full-Stack Docker Compose ────────────────────────────────
+# Starts Endee Vector Database + SmartRAG Backend + Streamlit Frontend
+#
+# Usage:
+#   docker compose up -d          # Start all services
+#   docker compose down           # Stop all services
+#   docker compose logs -f        # View logs
+# ─────────────────────────────────────────────────────────────────────
+
+services:
+
+  # ── Endee Vector Database ──────────────────────────────────────────
+  endee:
+    image: endeeio/endee-server:latest
+    container_name: smartrag-endee
+    ports:
+      - "8080:8080"
+    environment:
+      NDD_NUM_THREADS: 0
+      NDD_AUTH_TOKEN: ""
+    volumes:
+      - endee-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/index/list"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── SmartRAG Backend (FastAPI) ─────────────────────────────────────
+  smartrag-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smartrag-api
+    ports:
+      - "8000:8000"
+    environment:
+      ENDEE_HOST: http://endee:8080
+      ENDEE_AUTH_TOKEN: ""
+      ENDEE_INDEX_NAME: smartrag_docs
+      EMBEDDING_MODEL: all-MiniLM-L6-v2
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      LLM_MODEL: gemini-2.0-flash
+      LOG_LEVEL: INFO
+    volumes:
+      - smartrag-uploads:/app/data/uploads
+    depends_on:
+      endee:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── SmartRAG Frontend (Streamlit) ──────────────────────────────────
+  smartrag-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: smartrag-ui
+    command: streamlit run frontend/streamlit_app.py --server.port=8501 --server.address=0.0.0.0
+    ports:
+      - "8501:8501"
+    environment:
+      SMARTRAG_API_URL: http://smartrag-api:8000
+    depends_on:
+      - smartrag-api
+    restart: unless-stopped
+
+volumes:
+  endee-data:
+  smartrag-uploads:

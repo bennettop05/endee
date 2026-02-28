@@ -1,0 +1,33 @@
+# data
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# env
+.env
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# data
+data/uploads/
+*.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Models (downloaded at runtime)
+*.bin
+*.pt
+*.onnx
